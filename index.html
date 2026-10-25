@@ -14,16 +14,52 @@
 </head>
 <body>
 
-  <!-- BANNER JIKA ENDPOINT API BELUM DIATUR -->
-  <div id="api-config-banner">
-    ⚠️ <strong>URL Google Apps Script belum dikonfigurasi.</strong> 
-    <a onclick="App.openApiConfigModal()">Klik di sini untuk mengatur Web App URL</a> agar dapat terhubung ke database.
-  </div>
-
   <div id="app-root">
     
-    <!-- LAYAR LOGIN (Aktif jika belum login) -->
-    <div id="view-login">
+    <!-- 1. LAYAR SETUP KONEKSI DATABASE (Muncul jika belum ada database tersambung) -->
+    <div id="view-setup-db" style="display: none;">
+      <div class="login-card" style="max-width: 480px;">
+        <div class="login-brand">
+          <div class="login-logo" style="background: linear-gradient(135deg, var(--accent-600), var(--primary-600));">🔗</div>
+          <h1 class="login-title">Sambungkan Database</h1>
+          <p class="login-subtitle">Aplikasi ini berjalan mandiri tanpa database yang tertanam. Sambungkan ke Google Apps Script backend sekolah Anda.</p>
+        </div>
+
+        <form id="form-connect-db" onsubmit="App.handleConnectDatabase(event)">
+          <div class="form-group">
+            <label class="form-label" for="setup-api-url">URL Web App Google Apps Script</label>
+            <input 
+              type="url" 
+              id="setup-api-url" 
+              class="form-control" 
+              placeholder="https://script.google.com/macros/s/.../exec" 
+              required 
+              autofocus
+            />
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">
+              Masukkan URL Deployment Web App Anda yang berakhiran <code>/exec</code>.
+            </p>
+          </div>
+
+          <div style="background-color: var(--bg-subtle); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1.25rem; font-size: 0.8rem; color: var(--text-muted);">
+            <strong>📌 Cara Mendapatkan URL:</strong>
+            <ol style="margin-left: 1.2rem; margin-top: 0.35rem; line-height: 1.4;">
+              <li>Di Google Apps Script, klik <strong>Deploy</strong> &gt; <strong>New deployment</strong>.</li>
+              <li>Pilih jenis <strong>Web app</strong>.</li>
+              <li>Set <em>Who has access:</em> <strong>Anyone</strong>.</li>
+              <li>Klik Deploy dan salin Web App URL.</li>
+            </ol>
+          </div>
+
+          <button type="submit" id="btn-connect-db" class="btn btn-primary btn-block">
+            <span class="btn-text">Uji &amp; Sambungkan Database</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. LAYAR LOGIN (Aktif jika database sudah tersambung) -->
+    <div id="view-login" style="display: none;">
       <div class="login-card">
         <div class="login-brand">
           <div class="login-logo">SD</div>
@@ -62,16 +98,17 @@
           </button>
         </form>
 
-        <div style="margin-top: 1.5rem; text-align: center;">
-          <button type="button" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.35rem 0.65rem;" onclick="App.openApiConfigModal()">
-            ⚙️ Atur Endpoint API
-          </button>
+        <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+          <span style="color: var(--success-700);">● Database Terhubung</span>
+          <a href="javascript:void(0)" onclick="App.handleDisconnectDatabase()" style="color: var(--danger-500); text-decoration: underline;">
+            Ganti Database
+          </a>
         </div>
       </div>
     </div>
 
-    <!-- LAYAR UTAMA APLIKASI (Aktif setelah login) -->
-    <div id="view-app">
+    <!-- 3. LAYAR UTAMA APLIKASI (Aktif setelah login) -->
+    <div id="view-app" style="display: none;">
       
       <!-- Backdrop Mobile Drawer -->
       <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="App.closeSidebar()"></div>
@@ -109,7 +146,7 @@
           <div class="nav-section-label">Pengaturan Akun</div>
           <div class="nav-item" onclick="App.openProfileModal()">
             <span>⚙️</span>
-            <span>Profil & Keamanan</span>
+            <span>Profil &amp; Keamanan</span>
           </div>
           <div class="nav-item" onclick="App.handleLogout()" style="color: var(--danger-500);">
             <span>🚪</span>
@@ -162,31 +199,6 @@
     <!-- TOAST NOTIFICATION CONTAINER -->
     <div id="toast-container"></div>
 
-    <!-- MODAL: PENGATURAN ENDPOINT API -->
-    <div id="modal-api-config" class="modal-backdrop">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 class="modal-title">Konfigurasi Endpoint API Backend</h3>
-          <button type="button" class="modal-close" onclick="App.closeModal('modal-api-config')">&times;</button>
-        </div>
-        <form onsubmit="App.handleSaveApiConfig(event)">
-          <div class="modal-body">
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-              Masukkan URL Deployment Google Apps Script Web App (diakhiri <code>/exec</code>):
-            </p>
-            <div class="form-group">
-              <label class="form-label" for="input-api-url">Google Apps Script Web App URL</label>
-              <input type="url" id="input-api-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" required />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-api-config')">Batal</button>
-            <button type="submit" class="btn btn-primary">Simpan Endpoint</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
     <!-- MODAL: TAMBAH PENGGUNA (ADMIN ONLY) -->
     <div id="modal-add-user" class="modal-backdrop">
       <div class="modal-content">
@@ -201,7 +213,7 @@
               <input type="text" id="new-username" class="form-control" placeholder="contoh: guru.ahmad" required />
             </div>
             <div class="form-group">
-              <label class="form-label" for="new-nama">Nama Lengkap & Gelar</label>
+              <label class="form-label" for="new-nama">Nama Lengkap &amp; Gelar</label>
               <input type="text" id="new-nama" class="form-control" placeholder="contoh: Ahmad Fauzi, S.Pd." required />
             </div>
             <div class="form-group">
@@ -252,7 +264,7 @@
     <div id="modal-profile" class="modal-backdrop">
       <div class="modal-content">
         <div class="modal-header">
-          <h3 class="modal-title">Profil Saya & Ganti Password</h3>
+          <h3 class="modal-title">Profil Saya &amp; Ganti Password</h3>
           <button type="button" class="modal-close" onclick="App.closeModal('modal-profile')">&times;</button>
         </div>
         <form id="form-update-profile" onsubmit="App.handleUpdateProfile(event)">

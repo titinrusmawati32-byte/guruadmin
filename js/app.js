@@ -1,7 +1,7 @@
 /**
  * app.js
- * Controller Antarmuka Utama Frontend GitHub
- * Sistem Administrasi Guru SD
+ * Controller Antarmuka Utama Frontend
+ * Sistem Administrasi Guru SD - Zero Hardcoded Database
  */
 
 var App = (function() {
@@ -19,9 +19,6 @@ var App = (function() {
     STORAGE_KEY_THEME: 'SAG_THEME_PREF'
   };
 
-  /**
-   * Helper Notifikasi Toast
-   */
   function showToast(title, message, type) {
     type = type || 'info';
     var container = document.getElementById('toast-container');
@@ -60,9 +57,6 @@ var App = (function() {
       .replace(/'/g, '&#039;');
   }
 
-  /**
-   * Manajemen Modal
-   */
   function openModal(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = 'flex';
@@ -73,9 +67,6 @@ var App = (function() {
     if (el) el.style.display = 'none';
   }
 
-  /**
-   * Tema Terang / Gelap
-   */
   function initTheme() {
     var saved = localStorage.getItem(cfg.STORAGE_KEY_THEME) || 'light';
     setTheme(saved);
@@ -94,19 +85,24 @@ var App = (function() {
   }
 
   /**
-   * Inisialisasi Aplikasi & Verifikasi Sesi
+   * Inisialisasi Aplikasi Saat Halaman Dibuka
    */
   function init() {
     initTheme();
-    checkApiConfiguration();
 
+    // 1. Periksa apakah URL database sudah terhubung
+    if (!ApiService.isConfigured()) {
+      renderSetupDbScreen();
+      return;
+    }
+
+    // 2. Jika database terhubung, periksa sesi yang tersimpan
     var savedToken = sessionStorage.getItem(cfg.STORAGE_KEY_TOKEN);
     if (!savedToken) {
       renderLoginScreen();
       return;
     }
 
-    // Verifikasi sesi ke backend
     ApiService.request('verifySession', { token: savedToken })
       .then(function(res) {
         if (res && res.success && res.data && res.data.user) {
@@ -118,58 +114,73 @@ var App = (function() {
           renderLoginScreen();
         }
       })
-      .catch(function(err) {
+      .catch(function() {
         sessionStorage.removeItem(cfg.STORAGE_KEY_TOKEN);
         renderLoginScreen();
       });
   }
 
   /**
-   * Periksa Konfigurasi URL API
+   * Layar 1: Setup Koneksi Database
    */
-  function checkApiConfiguration() {
-    var banner = document.getElementById('api-config-banner');
-    if (!ApiService.isConfigured()) {
-      if (banner) banner.style.display = 'block';
-    } else {
-      if (banner) banner.style.display = 'none';
-    }
+  function renderSetupDbScreen() {
+    document.getElementById('view-app').style.display = 'none';
+    document.getElementById('view-login').style.display = 'none';
+    document.getElementById('view-setup-db').style.display = 'flex';
   }
 
-  function openApiConfigModal() {
-    var inp = document.getElementById('input-api-url');
-    if (inp) inp.value = ApiService.getApiUrl();
-    openModal('modal-api-config');
-  }
+  function handleConnectDatabase(event) {
+    event.preventDefault();
+    var inp = document.getElementById('setup-api-url');
+    var btn = document.getElementById('btn-connect-db');
+    var rawUrl = inp.value.trim();
 
-  function handleSaveApiConfig(e) {
-    e.preventDefault();
-    var val = document.getElementById('input-api-url').value.trim();
-    if (!val) {
-      alert('URL Endpoint tidak boleh kosong.');
+    if (!rawUrl) {
+      showToast('Peringatan', 'Harap masukkan URL Web App Google Apps Script.', 'error');
       return;
     }
-    ApiService.setApiUrl(val);
-    closeModal('modal-api-config');
-    checkApiConfiguration();
-    showToast('Konfigurasi Disimpan', 'Endpoint API berhasil diperbarui.', 'success');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Menguji Koneksi...';
+
+    ApiService.testConnection(rawUrl)
+      .then(function(res) {
+        btn.disabled = false;
+        btn.innerHTML = 'Uji & Sambungkan Database';
+
+        ApiService.setApiUrl(rawUrl);
+        showToast('Koneksi Berhasil', 'Database Google Apps Script Anda telah terhubung!', 'success');
+        renderLoginScreen();
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = 'Uji & Sambungkan Database';
+        showToast('Gagal Terhubung', err.message, 'error');
+      });
+  }
+
+  function handleDisconnectDatabase() {
+    if (confirm('Apakah Anda yakin ingin memutuskan database ini dan menyambungkan ke database lain?')) {
+      ApiService.disconnectDatabase();
+      state.token = null;
+      state.user = null;
+      sessionStorage.removeItem(cfg.STORAGE_KEY_TOKEN);
+      showToast('Database Diputus', 'Silakan sambungkan ke database yang baru.', 'info');
+      renderSetupDbScreen();
+    }
   }
 
   /**
-   * Layar Login
+   * Layar 2: Form Login
    */
   function renderLoginScreen() {
+    document.getElementById('view-setup-db').style.display = 'none';
     document.getElementById('view-app').style.display = 'none';
     document.getElementById('view-login').style.display = 'flex';
   }
 
   function handleLogin(event) {
     event.preventDefault();
-    if (!ApiService.isConfigured()) {
-      openApiConfigModal();
-      showToast('Konfigurasi Diperlukan', 'Harap atur URL Deployment Google Apps Script terlebih dahulu.', 'error');
-      return;
-    }
 
     var userInp = document.getElementById('login-username');
     var pwdInp = document.getElementById('login-password');
@@ -179,7 +190,7 @@ var App = (function() {
     var password = pwdInp.value;
 
     if (!username || !password) {
-      showToast('Peringatan', 'Username dan password wajib diisi.', 'error');
+      showToast('Peringatan', 'Username dan kata sandi wajib diisi.', 'error');
       return;
     }
 
@@ -204,13 +215,10 @@ var App = (function() {
       .catch(function(err) {
         btn.disabled = false;
         btn.innerHTML = 'Masuk ke Sistem';
-        showToast('Gagal Terhubung', err.message || 'Periksa koneksi atau URL API.', 'error');
+        showToast('Kesalahan Koneksi', err.message || 'Periksa koneksi database Anda.', 'error');
       });
   }
 
-  /**
-   * Logout
-   */
   function handleLogout() {
     if (confirm('Apakah Anda yakin ingin keluar dari sistem?')) {
       if (state.token) {
@@ -225,9 +233,10 @@ var App = (function() {
   }
 
   /**
-   * Layar Aplikasi Utama
+   * Layar 3: Workspace Aplikasi Utama
    */
   function renderAppScreen() {
+    document.getElementById('view-setup-db').style.display = 'none';
     document.getElementById('view-login').style.display = 'none';
     var appView = document.getElementById('view-app');
     appView.style.display = 'flex';
@@ -247,9 +256,6 @@ var App = (function() {
     navigateTo('dashboard');
   }
 
-  /**
-   * Navigasi Menu
-   */
   function navigateTo(viewName) {
     state.currentView = viewName;
 
@@ -285,9 +291,6 @@ var App = (function() {
     }
   }
 
-  /**
-   * Views
-   */
   function renderDashboardView(container) {
     container.innerHTML = 
       '<div class="stats-grid">' +
@@ -308,8 +311,8 @@ var App = (function() {
         '<div class="stat-card">' +
           '<div class="stat-icon stat-icon-emerald">⚡</div>' +
           '<div class="stat-info">' +
-            '<span class="stat-label">Status Fondasi</span>' +
-            '<span class="stat-value" style="font-size: 1.15rem; color: var(--success-500);">SIAP (Tahap 1)</span>' +
+            '<span class="stat-label">Status Database</span>' +
+            '<span class="stat-value" style="font-size: 1.15rem; color: var(--success-500);">TERHUBUNG</span>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -320,8 +323,8 @@ var App = (function() {
           (state.user.role === 'ADMIN' ? '<button class="btn btn-secondary" onclick="App.openSystemHealthModal()">Diagnostik Sistem</button>' : '') +
         '</div>' +
         '<div style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">' +
-          '<p>Frontend aplikasi berjalan mandiri dan terhubung secara aman ke backend Google Apps Script & Google Sheets.</p>' +
-          '<p style="margin-top: 0.75rem;"><strong>Pengguna:</strong> ' + sanitizeHTML(state.user.nama) + ' (' + state.user.username + ') | <strong>Login:</strong> ' + (state.user.lastLoginAt || 'Sesi Baru') + '</p>' +
+          '<p>Aplikasi berjalan dengan arsitektur mandiri (*decoupled*). Seluruh data diproses secara terisolasi dan aman.</p>' +
+          '<p style="margin-top: 0.75rem;"><strong>Akun:</strong> ' + sanitizeHTML(state.user.nama) + ' (' + state.user.username + ') | <strong>Login:</strong> ' + (state.user.lastLoginAt || 'Sesi Baru') + '</p>' +
         '</div>' +
       '</div>';
 
@@ -411,7 +414,7 @@ var App = (function() {
       })
       .catch(function(err) {
         var tbody = document.getElementById('users-table-body');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="color: var(--danger-500); text-align: center;">Kesalahan koneksi: ' + err.message + '</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="color: var(--danger-500); text-align: center;">Kesalahan: ' + err.message + '</td></tr>';
       });
   }
 
@@ -570,7 +573,7 @@ var App = (function() {
     ApiService.request('getSystemHealth', { token: state.token })
       .then(function(res) {
         if (!res || !res.success) {
-          container.innerHTML = '<div style="color: var(--danger-500); padding: 1rem;">Gagal memeriksa status: ' + (res ? res.message : 'Unknown error') + '</div>';
+          container.innerHTML = '<div style="color: var(--danger-500); padding: 1rem;">Gagal: ' + (res ? res.message : 'Unknown error') + '</div>';
           return;
         }
 
@@ -635,7 +638,7 @@ var App = (function() {
     }
 
     if (newPwd && !oldPwd) {
-      showToast('Peringatan', 'Masukkan kata sandi saat ini untuk konfirmasi pergantian.', 'error');
+      showToast('Peringatan', 'Masukkan kata sandi saat ini untuk konfirmasi.', 'error');
       return;
     }
 
@@ -685,6 +688,8 @@ var App = (function() {
 
   return {
     init: init,
+    handleConnectDatabase: handleConnectDatabase,
+    handleDisconnectDatabase: handleDisconnectDatabase,
     handleLogin: handleLogin,
     handleLogout: handleLogout,
     navigateTo: navigateTo,
@@ -700,9 +705,7 @@ var App = (function() {
     openSystemHealthModal: openSystemHealthModal,
     loadSystemHealth: loadSystemHealth,
     openProfileModal: openProfileModal,
-    handleUpdateProfile: handleUpdateProfile,
-    openApiConfigModal: openApiConfigModal,
-    handleSaveApiConfig: handleSaveApiConfig
+    handleUpdateProfile: handleUpdateProfile
   };
 })();
 

@@ -1,18 +1,22 @@
 /**
  * config.js
- * Konfigurasi Frontend Eksternal (GitHub Pages / Standalone Web)
- * Sistem Administrasi Guru SD
+ * Konfigurasi Sistem Administrasi Guru SD
+ * 
+ * CATATAN KEAMANAN & PRIVASI:
+ * File ini TIDAK memuat URL database atau Spreadsheet ID yang tertanam.
+ * Seluruh endpoint dikonfigurasi secara dinamis oleh pengguna melalui antarmuka
+ * dan disimpan secara lokal pada browser pengguna masing-masing.
  */
 
 window.APP_CONFIG = {
-  // Ganti nilai ini dengan Web App URL dari deployment Google Apps Script Anda:
-  // Contoh: https://script.google.com/macros/s/AKfycbx.../exec
-  API_URL: "https://script.google.com/macros/s/YOUR_GAS_DEPLOYMENT_ID/exec",
+  // Kosong secara default agar tidak ada URL database yang tertanam di GitHub
+  API_URL: "",
 
   APP_TITLE: "Sistem Administrasi Guru SD",
   APP_VERSION: "1.0.0-foundation",
   
-  // Kunci Penyimpanan Lokal
+  // Kunci Penyimpanan Lokal Peramban
   STORAGE_KEY_TOKEN: "SAG_AUTH_TOKEN_V1",
-  STORAGE_KEY_THEME: "SAG_THEME_PREF"
+  STORAGE_KEY_THEME: "SAG_THEME_PREF",
+  STORAGE_KEY_API_URL: "SAG_DYNAMIC_API_URL"
 };
