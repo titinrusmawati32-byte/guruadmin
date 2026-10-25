@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sistem Administrasi Guru SD</title>
+  
+  <!-- Font Modern Bebas Pelacak -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- BANNER JIKA ENDPOINT API BELUM DIATUR -->
+  <div id="api-config-banner">
+    ⚠️ <strong>URL Google Apps Script belum dikonfigurasi.</strong> 
+    <a onclick="App.openApiConfigModal()">Klik di sini untuk mengatur Web App URL</a> agar dapat terhubung ke database.
+  </div>
+
+  <div id="app-root">
+    
+    <!-- LAYAR LOGIN (Aktif jika belum login) -->
+    <div id="view-login">
+      <div class="login-card">
+        <div class="login-brand">
+          <div class="login-logo">SD</div>
+          <h1 class="login-title">Administrasi Guru SD</h1>
+          <p class="login-subtitle">Masuk untuk mengakses portal administrasi sekolah</p>
+        </div>
+
+        <form id="form-login" onsubmit="App.handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="login-username">Nama Pengguna (Username)</label>
+            <input 
+              type="text" 
+              id="login-username" 
+              class="form-control" 
+              placeholder="Masukkan username Anda" 
+              required 
+              autocomplete="username"
+              autofocus
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="login-password">Kata Sandi</label>
+            <input 
+              type="password" 
+              id="login-password" 
+              class="form-control" 
+              placeholder="Masukkan kata sandi" 
+              required 
+              autocomplete="current-password"
+            />
+          </div>
+
+          <button type="submit" id="btn-login-submit" class="btn btn-primary btn-block">
+            <span class="btn-text">Masuk ke Sistem</span>
+          </button>
+        </form>
+
+        <div style="margin-top: 1.5rem; text-align: center;">
+          <button type="button" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.35rem 0.65rem;" onclick="App.openApiConfigModal()">
+            ⚙️ Atur Endpoint API
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYAR UTAMA APLIKASI (Aktif setelah login) -->
+    <div id="view-app">
+      
+      <!-- Backdrop Mobile Drawer -->
+      <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="App.closeSidebar()"></div>
+
+      <!-- SIDEBAR -->
+      <aside id="app-sidebar" class="app-sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">SD</div>
+          <div>
+            <div class="sidebar-title">Administrasi SD</div>
+            <div class="sidebar-subtitle">Versi 1.0.0-foundation</div>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section-label">Menu Utama</div>
+          <div class="nav-item active" data-view="dashboard" onclick="App.navigateTo('dashboard')">
+            <span>📊</span>
+            <span>Dashboard</span>
+          </div>
+
+          <!-- Bagian Khusus ADMIN -->
+          <div id="admin-nav-section" style="display: none;">
+            <div class="nav-section-label">Manajemen Sistem</div>
+            <div class="nav-item" data-view="users" onclick="App.navigateTo('users')">
+              <span>👥</span>
+              <span>Kelola Pengguna</span>
+            </div>
+            <div class="nav-item" data-view="audit" onclick="App.navigateTo('audit')">
+              <span>🛡️</span>
+              <span>Audit Aktivitas</span>
+            </div>
+          </div>
+
+          <div class="nav-section-label">Pengaturan Akun</div>
+          <div class="nav-item" onclick="App.openProfileModal()">
+            <span>⚙️</span>
+            <span>Profil & Keamanan</span>
+          </div>
+          <div class="nav-item" onclick="App.handleLogout()" style="color: var(--danger-500);">
+            <span>🚪</span>
+            <span>Keluar Aplikasi</span>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-info-card" onclick="App.openProfileModal()" style="cursor: pointer;" title="Klik untuk edit profil">
+            <div class="user-avatar" id="current-user-avatar">A</div>
+            <div class="user-details">
+              <div class="user-name" id="current-user-name">Memuat...</div>
+              <span id="current-user-role" class="user-badge badge-admin">-</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main class="app-main">
+        <header class="app-header">
+          <div class="header-left">
+            <button type="button" class="btn-sidebar-toggle" onclick="App.toggleSidebar()" aria-label="Buka Menu">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+            <h1 class="header-title" id="current-page-title">Ringkasan Dashboard</h1>
+          </div>
+
+          <div class="header-right">
+            <button type="button" class="header-icon-btn" id="btn-theme-toggle" onclick="App.toggleTheme()" title="Ganti Tema">
+              🌙
+            </button>
+            <button type="button" class="header-icon-btn" onclick="App.handleLogout()" title="Keluar">
+              🚪
+            </button>
+          </div>
+        </header>
+
+        <section class="app-content" id="main-content-area">
+          <!-- Diisi via app.js -->
+        </section>
+      </main>
+
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container"></div>
+
+    <!-- MODAL: PENGATURAN ENDPOINT API -->
+    <div id="modal-api-config" class="modal-backdrop">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Konfigurasi Endpoint API Backend</h3>
+          <button type="button" class="modal-close" onclick="App.closeModal('modal-api-config')">&times;</button>
+        </div>
+        <form onsubmit="App.handleSaveApiConfig(event)">
+          <div class="modal-body">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+              Masukkan URL Deployment Google Apps Script Web App (diakhiri <code>/exec</code>):
+            </p>
+            <div class="form-group">
+              <label class="form-label" for="input-api-url">Google Apps Script Web App URL</label>
+              <input type="url" id="input-api-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" required />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-api-config')">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Endpoint</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: TAMBAH PENGGUNA (ADMIN ONLY) -->
+    <div id="modal-add-user" class="modal-backdrop">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Tambah Pengguna Baru</h3>
+          <button type="button" class="modal-close" onclick="App.closeModal('modal-add-user')">&times;</button>
+        </div>
+        <form id="form-add-user" onsubmit="App.handleCreateUser(event)">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label" for="new-username">Username</label>
+              <input type="text" id="new-username" class="form-control" placeholder="contoh: guru.ahmad" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-nama">Nama Lengkap & Gelar</label>
+              <input type="text" id="new-nama" class="form-control" placeholder="contoh: Ahmad Fauzi, S.Pd." required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-password">Password Awal</label>
+              <input type="password" id="new-password" class="form-control" placeholder="Minimal 6 karakter" minlength="6" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-role">Peran Sistem</label>
+              <select id="new-role" class="form-control" required>
+                <option value="GURU">GURU (Pendidik / Wali Kelas)</option>
+                <option value="ADMIN">ADMIN (Pengelola Sistem)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-guru-id">ID Guru (Opsional)</label>
+              <input type="text" id="new-guru-id" class="form-control" placeholder="contoh: GURU_001" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-add-user')">Batal</button>
+            <button type="submit" id="btn-submit-add-user" class="btn btn-primary">Simpan Pengguna</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: DIAGNOSTIK KESEHATAN SISTEM -->
+    <div id="modal-system-health" class="modal-backdrop">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Diagnostik Sistem Fondasi</h3>
+          <button type="button" class="modal-close" onclick="App.closeModal('modal-system-health')">&times;</button>
+        </div>
+        <div class="modal-body" id="system-health-body">
+          <div style="text-align: center; padding: 2rem;">
+            <span class="spinner" style="color: var(--primary-600); width: 2rem; height: 2rem;"></span>
+            <p style="margin-top: 1rem; color: var(--text-muted);">Memeriksa status...</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-system-health')">Tutup</button>
+          <button type="button" class="btn btn-primary" onclick="App.loadSystemHealth()">Refresh Status</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: PROFIL & GANTI PASSWORD -->
+    <div id="modal-profile" class="modal-backdrop">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Profil Saya & Ganti Password</h3>
+          <button type="button" class="modal-close" onclick="App.closeModal('modal-profile')">&times;</button>
+        </div>
+        <form id="form-update-profile" onsubmit="App.handleUpdateProfile(event)">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input type="text" id="profile-username" class="form-control" disabled />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profile-nama">Nama Lengkap</label>
+              <input type="text" id="profile-nama" class="form-control" required />
+            </div>
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;" />
+            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;">Ganti Password (Kosongkan jika tidak diubah)</h4>
+            <div class="form-group">
+              <label class="form-label" for="profile-old-pwd">Password Saat Ini</label>
+              <input type="password" id="profile-old-pwd" class="form-control" placeholder="Wajib jika ganti password" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profile-new-pwd">Password Baru</label>
+              <input type="password" id="profile-new-pwd" class="form-control" placeholder="Minimal 6 karakter" minlength="6" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-profile')">Batal</button>
+            <button type="submit" id="btn-submit-profile" class="btn btn-primary">Simpan Perubahan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SCRIPT INTEGRASI -->
+  <script src="config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
